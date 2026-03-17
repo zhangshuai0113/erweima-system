@@ -17,7 +17,7 @@ import javax.validation.Valid;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/qrcode")
+@RequestMapping("/qrcode")
 @Validated
 public class QrcodeController {
 

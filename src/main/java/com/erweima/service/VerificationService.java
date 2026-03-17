@@ -196,4 +196,61 @@ public class VerificationService {
     public List<VerificationRecord> getVerificationsByQrcodeId(Long qrcodeId) {
         return verificationRecordRepository.findByQrcodeId(qrcodeId);
     }
+
+    /**
+     * 通过二维码内容验证（用于H5扫描器）
+     * 直接通过二维码内容查询数据库中的记录进行验证
+     * @param content 二维码内容
+     * @return 验证结果
+     */
+    @Transactional
+    public VerificationResponse verifyByContent(String content) {
+        try {
+            log.info("开始通过内容验证二维码，内容: {}", content);
+
+            // 从数据库查询匹配的二维码记录
+            List<QrcodeRecord> records = qrcodeRecordRepository.findByContent(content);
+
+            if (records.isEmpty()) {
+                // 未找到匹配的记录，返回未知状态
+                return VerificationResponse.builder()
+                        .verifyResult(2)
+                        .verifyResultDesc("未知")
+                        .authenticityScore(0.0)
+                        .status(1)
+                        .verifyDetail("未找到匹配的二维码记录")
+                        .verifyTime(LocalDateTime.now())
+                        .message("未找到匹配的二维码记录")
+                        .success(false)
+                        .build();
+            }
+
+            // 使用第一条匹配的记录进行验证
+            QrcodeRecord qrcodeRecord = records.get(0);
+
+            // 构建验证请求
+            VerificationRequest request = VerificationRequest.builder()
+                    .qrcodeId(qrcodeRecord.getId())
+                    .qrcodeContent(content)
+                    .verifyMethod(0)
+                    .build();
+
+            // 执行验证
+            VerificationResponse response = verifyQrcode(request);
+            return response;
+
+        } catch (Exception e) {
+            log.error("通过内容验证二维码失败", e);
+            return VerificationResponse.builder()
+                    .verifyResult(2)
+                    .verifyResultDesc("验证失败")
+                    .authenticityScore(0.0)
+                    .status(2)
+                    .verifyDetail("验证异常: " + e.getMessage())
+                    .verifyTime(LocalDateTime.now())
+                    .message("验证失败: " + e.getMessage())
+                    .success(false)
+                    .build();
+        }
+    }
 }

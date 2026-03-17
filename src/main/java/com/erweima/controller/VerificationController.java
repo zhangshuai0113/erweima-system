@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/verification")
+@RequestMapping("/verification")
 @Validated
 public class VerificationController {
 
@@ -67,6 +67,21 @@ public class VerificationController {
         } catch (Exception e) {
             log.error("获取验证记录失败", e);
             return ApiResponse.fail("获取验证记录失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 通过二维码内容验证（用于H5扫描器）
+     */
+    @PostMapping("/verify-by-content")
+    public ApiResponse<VerificationResponse> verifyByContent(@RequestParam String content) {
+        log.info("收到二维码内容验证请求，内容: {}", content);
+        try {
+            VerificationResponse response = verificationService.verifyByContent(content);
+            return ApiResponse.success("验证完成", response);
+        } catch (Exception e) {
+            log.error("二维码验证失败", e);
+            return ApiResponse.fail("验证失败: " + e.getMessage());
         }
     }
 

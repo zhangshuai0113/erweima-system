@@ -31,7 +31,7 @@ public class QrcodeProperties {
     /**
      * 上传目录路径
      */
-    private String uploadDir = "/tmp/qrcode";
+    private String uploadDir = "/User/zs/Desktop/test";
 
     /**
      * 防伪特征配置

@@ -276,6 +276,50 @@
                 opacity: 1;
             }
         }
+
+        .verification-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .verification-badge.authentic {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .verification-badge.counterfeit {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .verification-badge.suspicious {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .verification-details {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .verification-details p {
+            margin: 6px 0;
+            color: #333;
+        }
+
+        .verification-details strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -380,6 +424,7 @@
         });
 
         // 上传图片
+        debugger;
         uploadBtn.addEventListener('click', () => {
             fileInput.click();
         });
@@ -448,18 +493,88 @@
         // 处理二维码
         function handleQRCode(data) {
             currentResult = data;
-            resultContent.textContent = data;
-            result.classList.add('show');
-            showStatus('扫描成功！', 'success');
+            debugger;
+            showStatus('正在验证二维码...', 'info');
 
-            // 如果是URL，自动打开
-            if (data.startsWith('http://') || data.startsWith('https://')) {
-                setTimeout(() => {
-                    if (confirm('是否打开此链接？\n\n' + data)) {
-                        window.open(data, '_blank');
-                    }
-                }, 500);
+            // 调用验证API
+            verifyQRCode(data);
+
+            // 继续扫描循环，不要停止
+            requestAnimationFrame(scan);
+        }
+
+        // 验证二维码
+        function verifyQRCode(content) {
+            fetch('/api/verification/verify-by-content?content=' + encodeURIComponent(content), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                debugger;
+                if (data.code === 0 && data.data) {
+                    const verifyResult = data.data;
+                    displayVerificationResult(verifyResult);
+                } else {
+                    // 验证失败，不显示扫描结果
+                    result.classList.remove('show');
+                    showStatus('验证失败: ' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('验证请求失败:', error);
+                result.classList.remove('show');
+                showStatus('验证请求失败: ' + error.message, 'error');
+            });
+        }
+
+        // 显示验证结果
+        function displayVerificationResult(verifyResult) {
+            debugger;
+            let statusClass = 'unknown';
+            let statusText = '未知';
+            let statusMessage = '';
+            let shouldShowResult = false;
+
+            if (verifyResult.verifyResult === 0) {
+                // 正品 - 显示扫描结果
+                statusClass = 'authentic';
+                statusText = '✓ 正品';
+                statusMessage = '✓ 验证通过，这是正品！';
+                shouldShowResult = true;
+            } else if (verifyResult.verifyResult === 1) {
+                // 复印品/伪造品 - 不显示扫描结果
+                statusClass = 'counterfeit';
+                statusText = '✗ 复印品/伪造品';
+                statusMessage = '✗ 验证失败，这可能是复印品或伪造品！';
+                shouldShowResult = false;
+            } else if (verifyResult.verifyResult === 2) {
+                // 真伪度不确定 - 不显示扫描结果
+                statusClass = 'suspicious';
+                statusText = '? 真伪度不确定';
+                statusMessage = '? 验证结果不确定，请谨慎';
+                shouldShowResult = false;
             }
+
+            // 只在验证成功时显示扫描结果
+            if (shouldShowResult) {
+                resultContent.textContent = currentResult;
+                resultContent.innerHTML = '<div class="verification-badge ' + statusClass + '">' + statusText + '</div>' +
+                    '<div class="verification-details">' +
+                    '<p><strong>验证结果:</strong> ' + verifyResult.verifyResultDesc + '</p>' +
+                    '<p><strong>真伪度:</strong> ' + (verifyResult.authenticityScore || 0).toFixed(1) + '%</p>' +
+                    '<p><strong>验证详情:</strong> ' + verifyResult.verifyDetail + '</p>' +
+                    '<p><strong>验证时间:</strong> ' + new Date(verifyResult.verifyTime).toLocaleString() + '</p>' +
+                    '</div>';
+                result.classList.add('show');
+            } else {
+                // 验证失败，不显示扫描结果
+                result.classList.remove('show');
+            }
+
+            showStatus(statusMessage, statusClass === 'authentic' ? 'success' : (statusClass === 'counterfeit' ? 'error' : 'info'));
         }
 
         // 显示状态
