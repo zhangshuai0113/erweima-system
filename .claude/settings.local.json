@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf ~/.m2/repository)",
+      "Bash(mvn clean:*)"
+    ]
+  }
+}
